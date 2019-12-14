@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	log "github.com/cjburchell/go-uatu"
-	logSettings "github.com/cjburchell/go-uatu/settings"
-	queueRoute "github.com/cjburchell/queue/routes/queue-route"
+	"github.com/cjburchell/queue/log"
+	"github.com/cjburchell/queue/routes/queue-route"
 	"github.com/cjburchell/queue/routes/status-route"
 	"github.com/cjburchell/queue/serivce/data"
 	"github.com/cjburchell/queue/serivce/queue"
@@ -19,25 +18,22 @@ import (
 )
 
 func main() {
-	err := logSettings.SetupLogger()
-	if err != nil {
-		log.Warn(err, "Unable to Connect to logger")
-	}
+	logger := log.Create()
 
-	config, err := settings.Get()
+	config, err := settings.Get(logger)
 	if err != nil{
-		log.Fatal(err, "Unable to verify settings")
+		logger.Fatal(err, "Unable to verify settings")
 	}
 
 	dataService, err := data.NewService(config.MongoUrl)
 	if err != nil {
-		log.Fatalf(err, "Unable to Connect to mongo %s", config.MongoUrl)
+		logger.Fatalf(err, "Unable to Connect to mongo %s", config.MongoUrl)
 	}
 
-	srv := startHttpServer(config.Port, dataService)
-	defer stopHttpServer(srv)
+	srv := startHTTPServer(config.Port, dataService, logger)
+	defer stopHTTPServer(srv, logger)
 
-	workers := queue.StartWorkers(*config, dataService)
+	workers := queue.StartWorkers(*config, dataService, logger)
 	defer workers.Stop()
 
 	// wait for app shutdown
@@ -45,27 +41,27 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	<-c
 
-	log.Print("shutting down")
+	logger.Print("shutting down")
 	os.Exit(0)
 }
 
-func stopHttpServer(srv *http.Server) {
+func stopHTTPServer(srv *http.Server, logger log.ILog) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
 	err := srv.Shutdown(ctx)
 	if err != nil {
-		log.Error(err)
+		logger.Error(err)
 	}
 }
 
-func startHttpServer(port int, dataService data.IService) *http.Server {
+func startHTTPServer(port int, dataService data.IService, logger log.ILog) *http.Server {
 	r := mux.NewRouter()
-	status_route.Setup(r)
-	queueRoute.Setup(r, dataService)
+	status_route.Setup(r, logger)
+	queue_route.Setup(r, dataService, logger)
 
-	loggedRouter := handlers.LoggingHandler(log.Writer{Level: log.DEBUG}, r)
+	loggedRouter := handlers.LoggingHandler(logger.GetWriter(log.DEBUG), r)
 
-	log.Printf("Starting Server at port %d", port)
+	logger.Printf("Starting Server at port %d", port)
 	srv := &http.Server{
 		Handler:      loggedRouter,
 		Addr:         fmt.Sprintf(":%d", port),
@@ -75,7 +71,7 @@ func startHttpServer(port int, dataService data.IService) *http.Server {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error(err)
+			logger.Error(err)
 		}
 	}()
 

@@ -2,8 +2,8 @@ package settings
 
 import (
 	"fmt"
-	log "github.com/cjburchell/go-uatu"
-	"github.com/cjburchell/tools-go/env"
+	"github.com/cjburchell/queue/log"
+	"github.com/cjburchell/queue/tools/env"
 )
 
 const defaultMongoUrl ="localhost"
@@ -23,8 +23,8 @@ type Configuration struct {
 	MaxJobTimeMilliseconds int64
 }
 
-func Get() (*Configuration, error) {
-	err := verify()
+func Get(logger log.ILog) (*Configuration, error) {
+	err := verify(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func Get() (*Configuration, error) {
 }
 
 
-func verify() error {
+func verify(logger log.ILog) error {
 
 	warningMessage := ""
 	if env.Get("MONGO_URL", defaultMongoUrl) == defaultMongoUrl {
@@ -48,7 +48,7 @@ func verify() error {
 	}
 
 	if warningMessage != "" {
-		log.Warn("Warning: " + warningMessage)
+		logger.Warn("Warning: " + warningMessage)
 	}
 
 	return nil

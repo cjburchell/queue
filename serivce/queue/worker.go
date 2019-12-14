@@ -2,7 +2,7 @@ package queue
 
 import (
 	"bytes"
-	log "github.com/cjburchell/go-uatu"
+	"github.com/cjburchell/queue/log"
 	"github.com/cjburchell/queue/serivce/data/models"
 	"net/http"
 )
@@ -16,14 +16,16 @@ type worker struct {
 	workerQueue chan worker
 	quitChan    chan bool
 	Job         chan queueItem
+	logger      log.ILog
 }
 
-func newWorker(workerQueue chan worker) worker {
+func newWorker(workerQueue chan worker, logger log.ILog) worker {
 
 	worker := worker{
 		Job:         make(chan queueItem),
 		workerQueue: workerQueue,
 		quitChan:    make(chan bool),
+		logger: logger,
 	}
 
 	return worker
@@ -52,15 +54,15 @@ func (w *worker) Start() {
 	}()
 }
 
-func (w *worker) Process(job queueItem) queueItem {
-	if doHttpRequest(job.Call){
+func (w worker) Process(job queueItem) queueItem {
+	if w.doHttpRequest(job.Call){
 		job.Completed = true
 	}
 
 	return job
 }
 
-func doHttpRequest(call models.Call) bool {
+func (w worker)doHttpRequest(call models.Call) bool {
 
 	restClient := &http.Client{}
 
@@ -74,7 +76,7 @@ func doHttpRequest(call models.Call) bool {
 
 	req, err := http.NewRequest(call.Method, call.Path, body)
 	if err != nil {
-		log.Error(err)
+		w.logger.Error(err)
 		return false
 	}
 
@@ -82,19 +84,19 @@ func doHttpRequest(call models.Call) bool {
 
 	resp, err := restClient.Do(req)
 	if err != nil {
-		log.Error(err)
+		w.logger.Error(err)
 		return false
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Warnf("Unable to %s %s(%d)",call.Method, call.Path, resp.StatusCode)
+		w.logger.Warnf("Unable to %s %s(%d)",call.Method, call.Path, resp.StatusCode)
 		return false
 	}
 
 	return true
 }
 
-func (w *worker) Stop() {
+func (w worker) Stop() {
 	go func() {
 		w.quitChan <- true
 	}()
