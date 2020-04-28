@@ -2,7 +2,7 @@ pipeline{
     agent any
     environment {
             DOCKER_IMAGE = "cjburchell/queue"
-            DOCKER_TAG = "${env.BRANCH_NAME}"
+            DOCKER_TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
             PROJECT_PATH = "/code"
     }
 
@@ -20,11 +20,10 @@ pipeline{
         stage('Build') {
             steps {
                 script {
+                    def image = docker.build("${DOCKER_IMAGE}")
+                    image.tag("${DOCKER_TAG}")
                     if( env.BRANCH_NAME == "master") {
-                        docker.build("${DOCKER_IMAGE}").tag("latest")
-                    }
-                    else {
-                        docker.build("${DOCKER_IMAGE}").tag("${DOCKER_TAG}")
+                        image.tag("latest")
                     }
                 }
             }
@@ -33,14 +32,12 @@ pipeline{
         stage ('Push') {
             steps {
                 script {
-                    docker.withRegistry('https://390282485276.dkr.ecr.us-east-1.amazonaws.com', 'ecr:us-east-1:redpoint-ecr-credentials') {
-                        if( env.BRANCH_NAME == "master")
-                        {
-                            docker.image("${DOCKER_IMAGE}").push("latest")
-                        }
-                        else {
-                            docker.image("${DOCKER_IMAGE}").push("${DOCKER_TAG}")
-                        }
+                    docker.withRegistry('', 'dockerhub') {
+                       def image = docker.image("${DOCKER_IMAGE}")
+                       image.push("${DOCKER_TAG}")
+                       if( env.BRANCH_NAME == "master") {
+                            image.push("latest")
+                       }
                     }
                 }
             }
@@ -50,6 +47,8 @@ pipeline{
     post {
         always {
               script{
+			      sh "docker system prune -f || true"
+				  
                   if ( currentBuild.currentResult == "SUCCESS" ) {
                     slackSend color: "good", message: "Job: ${env.JOB_NAME} with build number ${env.BUILD_NUMBER} was successful"
                   }
