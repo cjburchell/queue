@@ -13,11 +13,11 @@ type service struct {
 	session *mgo.Session
 }
 
-func (s service) DeleteJob(jobId string) error {
+func (s service) DeleteJob(jobID string) error {
 	session := s.session.Clone()
 	defer session.Close()
 
-	return errors.WithStack(session.DB(dbName).C(jobsCollection).RemoveId(jobId))
+	return errors.WithStack(session.DB(dbName).C(jobsCollection).RemoveId(jobID))
 }
 func getTimestamp() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
@@ -43,9 +43,10 @@ func (s service) GetNextJob(maxJobTime int64) (*models.Job, error) {
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, nil
-		} else {
-			return nil, errors.WithStack(err)
 		}
+
+		return nil, errors.WithStack(err)
+
 	} else if info.Updated == 0 {
 		return nil, nil
 	}
@@ -57,12 +58,12 @@ func getFutureTimeStamp(milli int64) int64 {
 	return time.Now().Add(time.Millisecond*time.Duration(milli)).UnixNano() / (int64(time.Millisecond))
 }
 
-func (s service) DelayJob(jobId string, delay int64, priority int) error {
+func (s service) DelayJob(jobID string, delay int64, priority int) error {
 	session := s.session.Clone()
 	defer session.Close()
 
 	DelayTime := getFutureTimeStamp(delay)
-	return errors.WithStack(session.DB(dbName).C(jobsCollection).UpdateId(jobId, bson.M{"$set": bson.M{"timestamp": DelayTime, "priority": priority}}))
+	return errors.WithStack(session.DB(dbName).C(jobsCollection).UpdateId(jobID, bson.M{"$set": bson.M{"timestamp": DelayTime, "priority": priority}}))
 }
 
 const dbName = "Queue"
@@ -74,7 +75,7 @@ func (s service) AddJob(call models.Call, repeat bool, delay int64, retries int,
 
 	u1 := uuid.NewV4()
 	job := models.Job{
-		Id:              u1.String(),
+		ID:              u1.String(),
 		Call:            call,
 		MaxRetries:      retries,
 		Delay:           delay,
@@ -107,6 +108,7 @@ func (s *service) setup(address string) error {
 	return nil
 }
 
+// NewService creates the new data service
 func NewService(address string) (IService, error) {
 	service := &service{}
 	err := service.setup(address)

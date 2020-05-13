@@ -2,6 +2,7 @@ package models
 
 import "encoding/json"
 
+// Call object
 type Call struct {
 	Path         string            `bson:"path" json:"path"`
 	Method       string            `bson:"method" json:"method"`
@@ -11,8 +12,9 @@ type Call struct {
 	Header       map[string]string `bson:"header" json:"header"`
 }
 
+// Job object
 type Job struct {
-	Id   string `bson:"_id" json:"id"`
+	ID   string `bson:"_id" json:"id"`
 	Call Call   `bson:"call" json:"call"`
 
 	// settings

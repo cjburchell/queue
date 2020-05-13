@@ -1,15 +1,16 @@
-package queue_route
+package queue
 
 import (
 	"encoding/json"
-	"github.com/cjburchell/queue/log"
 	"github.com/cjburchell/queue/routes/contract"
 	"github.com/cjburchell/queue/routes/token"
 	"github.com/cjburchell/queue/serivce/data"
+	"github.com/cjburchell/uatu-go"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
+// Setup the queue route
 func Setup(r *mux.Router, dataService data.IService, logger log.ILog) {
 	r.HandleFunc("/queue/job", token.ValidateMiddleware(func(writer http.ResponseWriter, request *http.Request) {
 		handlePostJob(writer, request, dataService, logger)

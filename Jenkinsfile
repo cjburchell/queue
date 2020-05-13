@@ -17,6 +17,44 @@ pipeline{
              }
          }
 
+         stage('Static Analysis') {
+                     parallel {
+                         stage('Vet') {
+                             agent {
+                                 docker {
+                                     image 'cjburchell/goci:1.14'
+                                     args '-v $WORKSPACE:$PROJECT_PATH'
+                                 }
+                             }
+                             steps {
+                                 script{
+                                         sh """go vet ./..."""
+
+                                         def checkVet = scanForIssues tool: [$class: 'GoVet']
+                                         publishIssues issues:[checkVet]
+                                 }
+                             }
+                         }
+
+                         stage('Lint') {
+                             agent {
+                                 docker {
+                                     image 'cjburchell/goci:1.14'
+                                     args '-v $WORKSPACE:$PROJECT_PATH'
+                                 }
+                             }
+                             steps {
+                                 script{
+                                     sh """golint ./..."""
+
+                                     def checkLint = scanForIssues tool: [$class: 'GoLint']
+                                     publishIssues issues:[checkLint]
+                                 }
+                             }
+                         }
+                     }
+                 }
+
         stage('Build') {
             steps {
                 script {

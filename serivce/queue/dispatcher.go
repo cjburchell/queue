@@ -1,9 +1,9 @@
 package queue
 
 import (
-	"github.com/cjburchell/queue/log"
 	"github.com/cjburchell/queue/serivce/data"
 	"github.com/cjburchell/queue/settings"
+	"github.com/cjburchell/uatu-go"
 	"time"
 )
 
@@ -18,6 +18,7 @@ func getJob(maxJobTimeMilliseconds int64, dataService data.IService) (*queueItem
 	return &queueItem{Job: *job}, err
 }
 
+// Dispatcher object
 type Dispatcher struct {
 	quitChan chan bool
 	workerQueue chan worker
@@ -27,12 +28,14 @@ type Dispatcher struct {
 	logger log.ILog
 }
 
+// Stop the dispatcher
 func (d Dispatcher)Stop()  {
 	go func() {
 		d.quitChan <- true
 	}()
 }
 
+// StartWorkers starts all workers
 func StartWorkers(configuration settings.Configuration, dataService data.IService, logger log.ILog) Dispatcher {
 	workerQueue := make(chan worker, configuration.MaxWorkers)
 	workers := make([]worker, configuration.MaxWorkers)
@@ -91,7 +94,7 @@ func process(worker worker, job *queueItem, dataService data.IService, configura
 				logger.Error(err)
 			}
 		} else {
-			err := dataService.DelayJob(job.Id, configuration.RetryDelay*int64(workDone.Tries), job.Priority)
+			err := dataService.DelayJob(job.ID, configuration.RetryDelay*int64(workDone.Tries), job.Priority)
 			if err != nil {
 				logger.Error(err)
 			}
@@ -102,12 +105,12 @@ func process(worker worker, job *queueItem, dataService data.IService, configura
 func stopJob(job *queueItem, dataService data.IService) error {
 	if job.Repeat {
 		// requeue the job
-		err := dataService.DelayJob(job.Id, job.Delay, job.InitialPriority)
+		err := dataService.DelayJob(job.ID, job.Delay, job.InitialPriority)
 		if err != nil {
 			return err
 		}
 	} else {
-		err := dataService.DeleteJob(job.Id)
+		err := dataService.DeleteJob(job.ID)
 		if err != nil {
 			return err
 		}
