@@ -1,11 +1,12 @@
-package status_route
+package status
 
 import (
-	"github.com/cjburchell/queue/log"
+	"github.com/cjburchell/uatu-go"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
+// Setup the status route
 func Setup(r *mux.Router, logger log.ILog) {
 	r.HandleFunc("/@status", func(writer http.ResponseWriter, request *http.Request) {
 		handleGetStatus(writer, request, logger)

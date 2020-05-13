@@ -17,6 +17,44 @@ pipeline{
              }
          }
 
+         stage('Static Analysis') {
+                     parallel {
+                         stage('Vet') {
+                             agent {
+                                 docker {
+                                     image 'cjburchell/goci:1.14'
+                                     args '-v $WORKSPACE:$PROJECT_PATH'
+                                 }
+                             }
+                             steps {
+                                 script{
+                                         sh """go vet ./..."""
+
+                                         def checkVet = scanForIssues tool: [$class: 'GoVet']
+                                         publishIssues issues:[checkVet]
+                                 }
+                             }
+                         }
+
+                         stage('Lint') {
+                             agent {
+                                 docker {
+                                     image 'cjburchell/goci:1.14'
+                                     args '-v $WORKSPACE:$PROJECT_PATH'
+                                 }
+                             }
+                             steps {
+                                 script{
+                                     sh """golint ./..."""
+
+                                     def checkLint = scanForIssues tool: [$class: 'GoLint']
+                                     publishIssues issues:[checkLint]
+                                 }
+                             }
+                         }
+                     }
+                 }
+
         stage('Build') {
             steps {
                 script {
@@ -48,6 +86,7 @@ pipeline{
         always {
               script{
 			      sh "docker system prune -f || true"
+			      sh "docker image prune -af || true"
 				  
                   if ( currentBuild.currentResult == "SUCCESS" ) {
                     slackSend color: "good", message: "Job: ${env.JOB_NAME} with build number ${env.BUILD_NUMBER} was successful"

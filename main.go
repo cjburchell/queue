@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/cjburchell/queue/log"
-	"github.com/cjburchell/queue/routes/queue-route"
-	"github.com/cjburchell/queue/routes/status-route"
+	queueroute "github.com/cjburchell/queue/routes/queue"
+	"github.com/cjburchell/queue/routes/status"
 	"github.com/cjburchell/queue/serivce/data"
 	"github.com/cjburchell/queue/serivce/queue"
 	"github.com/cjburchell/queue/settings"
+	config "github.com/cjburchell/settings-go"
+	"github.com/cjburchell/tools-go/env"
+	"github.com/cjburchell/uatu-go"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"net/http"
@@ -18,22 +20,23 @@ import (
 )
 
 func main() {
-	logger := log.Create()
+	configFile := config.Get(env.Get("SettingsFile", ""))
+	logger := log.Create(configFile)
 
-	config, err := settings.Get(logger)
+	appConfig, err := settings.Get(logger, configFile)
 	if err != nil{
 		logger.Fatal(err, "Unable to verify settings")
 	}
 
-	dataService, err := data.NewService(config.MongoUrl)
+	dataService, err := data.NewService(appConfig.MongoURL)
 	if err != nil {
-		logger.Fatalf(err, "Unable to Connect to mongo %s", config.MongoUrl)
+		logger.Fatalf(err, "Unable to Connect to mongo %s", appConfig.MongoURL)
 	}
 
-	srv := startHTTPServer(config.Port, dataService, logger)
+	srv := startHTTPServer(appConfig.Port, dataService, logger)
 	defer stopHTTPServer(srv, logger)
 
-	workers := queue.StartWorkers(*config, dataService, logger)
+	workers := queue.StartWorkers(*appConfig, dataService, logger)
 	defer workers.Stop()
 
 	// wait for app shutdown
@@ -56,8 +59,8 @@ func stopHTTPServer(srv *http.Server, logger log.ILog) {
 
 func startHTTPServer(port int, dataService data.IService, logger log.ILog) *http.Server {
 	r := mux.NewRouter()
-	status_route.Setup(r, logger)
-	queue_route.Setup(r, dataService, logger)
+	status.Setup(r, logger)
+	queueroute.Setup(r, dataService, logger)
 
 	loggedRouter := handlers.LoggingHandler(logger.GetWriter(log.DEBUG), r)
 

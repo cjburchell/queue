@@ -2,8 +2,8 @@ package queue
 
 import (
 	"bytes"
-	"github.com/cjburchell/queue/log"
 	"github.com/cjburchell/queue/serivce/data/models"
+	"github.com/cjburchell/uatu-go"
 	"net/http"
 )
 
@@ -55,14 +55,14 @@ func (w *worker) Start() {
 }
 
 func (w worker) Process(job queueItem) queueItem {
-	if w.doHttpRequest(job.Call){
+	if w.doHTTPRequest(job.Call){
 		job.Completed = true
 	}
 
 	return job
 }
 
-func (w worker)doHttpRequest(call models.Call) bool {
+func (w worker) doHTTPRequest(call models.Call) bool {
 
 	restClient := &http.Client{}
 

@@ -2,6 +2,7 @@ package contract
 
 import "github.com/cjburchell/queue/serivce/data/models"
 
+// Job object
 type Job struct {
 	Call     models.Call `json:"call"`
 	Repeat   bool        `json:"repeat"`

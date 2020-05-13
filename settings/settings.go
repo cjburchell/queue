@@ -2,11 +2,11 @@ package settings
 
 import (
 	"fmt"
-	"github.com/cjburchell/queue/log"
-	"github.com/cjburchell/queue/tools/env"
+	"github.com/cjburchell/settings-go"
+	"github.com/cjburchell/uatu-go"
 )
 
-const defaultMongoUrl ="localhost"
+const defaultMongoURL ="localhost"
 
 const defaultPort  = 8091
 const maxWorkers = 10
@@ -14,8 +14,9 @@ const defaultRetryDelay int64 = 1000
 const sleepMilliseconds int64 = 1000
 const maxJobTime int64 = 60000
 
+// Configuration of the application
 type Configuration struct {
-	MongoUrl               string
+	MongoURL               string
 	Port                   int
 	MaxWorkers             int
 	RetryDelay             int64
@@ -23,28 +24,28 @@ type Configuration struct {
 	MaxJobTimeMilliseconds int64
 }
 
-func Get(logger log.ILog) (*Configuration, error) {
-	err := verify(logger)
+// Get the application settings
+func Get(logger log.ILog, settings settings.ISettings) (*Configuration, error) {
+	err := verify(logger, settings)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Configuration{
-		MongoUrl:               env.Get("MONGO_URL", defaultMongoUrl),
-		Port:                   env.GetInt("PORT", defaultPort),
-		MaxWorkers:             env.GetInt("maxWorkers", maxWorkers),
-		RetryDelay:             env.GetInt64("retryDelay", defaultRetryDelay),
-		SleepMilliseconds:      env.GetInt64("sleep", sleepMilliseconds),
-		MaxJobTimeMilliseconds: env.GetInt64("maxJobTime", maxJobTime),
+		MongoURL:               settings.Get("MONGO_URL", defaultMongoURL),
+		Port:                   settings.GetInt("PORT", defaultPort),
+		MaxWorkers:             settings.GetInt("maxWorkers", maxWorkers),
+		RetryDelay:             settings.GetInt64("retryDelay", defaultRetryDelay),
+		SleepMilliseconds:      settings.GetInt64("sleep", sleepMilliseconds),
+		MaxJobTimeMilliseconds: settings.GetInt64("maxJobTime", maxJobTime),
 	}, nil
 }
 
 
-func verify(logger log.ILog) error {
-
+func verify(logger log.ILog, settings settings.ISettings) error {
 	warningMessage := ""
-	if env.Get("MONGO_URL", defaultMongoUrl) == defaultMongoUrl {
-		warningMessage += fmt.Sprintf("\nMONGO_URL set to default value (%s)", defaultMongoUrl)
+	if settings.Get("MONGO_URL", defaultMongoURL) == defaultMongoURL {
+		warningMessage += fmt.Sprintf("\nMONGO_URL set to default value (%s)", defaultMongoURL)
 	}
 
 	if warningMessage != "" {
