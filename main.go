@@ -3,28 +3,30 @@ package main
 import (
 	"context"
 	"fmt"
-	queueroute "github.com/cjburchell/queue/routes/queue"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	queueRoute "github.com/cjburchell/queue/routes/queue"
 	"github.com/cjburchell/queue/routes/status"
 	"github.com/cjburchell/queue/serivce/data"
 	"github.com/cjburchell/queue/serivce/queue"
 	"github.com/cjburchell/queue/settings"
 	config "github.com/cjburchell/settings-go"
 	"github.com/cjburchell/tools-go/env"
-	"github.com/cjburchell/uatu-go"
+	log "github.com/cjburchell/uatu-go"
+	logSettings "github.com/cjburchell/uatu-go/settings"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 )
 
 func main() {
 	configFile := config.Get(env.Get("SettingsFile", ""))
-	logger := log.Create(configFile)
+	logger := log.Create(logSettings.Get(configFile.GetSection("Logging")))
 
 	appConfig, err := settings.Get(logger, configFile)
-	if err != nil{
+	if err != nil {
 		logger.Fatal(err, "Unable to verify settings")
 	}
 
@@ -60,7 +62,7 @@ func stopHTTPServer(srv *http.Server, logger log.ILog) {
 func startHTTPServer(port int, dataService data.IService, logger log.ILog) *http.Server {
 	r := mux.NewRouter()
 	status.Setup(r, logger)
-	queueroute.Setup(r, dataService, logger)
+	queueRoute.Setup(r, dataService, logger)
 
 	loggedRouter := handlers.LoggingHandler(logger.GetWriter(log.DEBUG), r)
 
